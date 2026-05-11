@@ -14,16 +14,10 @@
     background: #fff; box-shadow: 0 0 24px rgba(0,0,0,0.06);
     display: flex; flex-direction: column; overflow: hidden;
   }
-  #sidebar.collapsed { width: 40px; }
-  #sidebar.collapsed .panel-content { display: none; }
+  #sidebar.collapsed { width: 350px; }
+  #sidebar.collapsed .panel-content > *:not(.panel-header) { display: none; }
 
-  #toggle-btn {
-    position: absolute; top: 10px; right: -36px; width: 32px; height: 32px;
-    background: #fff; border: 1px solid #ddd; border-radius: 0 6px 6px 0;
-    cursor: pointer; font-size: 16px; line-height: 30px; text-align: center;
-    box-shadow: 2px 0 6px rgba(0,0,0,0.08); z-index: 101; color: #666;
-  }
-  #sidebar.collapsed #toggle-btn { right: -36px; }
+  #toggle-btn { display: none; }
 
   .panel-content { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 
@@ -155,8 +149,8 @@
   .stats-bar strong { color: #1677ff; }
 
   /* 地图容器 */
-  #map-container { position: absolute; top: 0; left: 350px; right: 0; bottom: 0; }
-  #sidebar.collapsed ~ #map-container { left: 40px; }
+  #map-container { position: absolute; top: 0; left: 350px; right: 0; bottom: 0; z-index: 1; }
+  #sidebar.collapsed ~ #map-container { left: 350px; }
 
   /* 信息窗自定义样式 */
   .info-card {
@@ -176,22 +170,22 @@
   }
 
   /* 移动端适配 */
-  #mobile-toggle-btn { display: none; }
+  #mobile-toggle-btn {
+    display: flex; align-items: center; gap: 4px;
+    flex-shrink: 0; font-size: 11px;
+  }
+  .panel-header { display: flex; align-items: center; justify-content: space-between; }
+  .panel-header > div { flex: 1; min-width: 0; }
 
   @media (max-width: 768px) {
     #sidebar { width: 100%; height: auto; max-height: 50vh; bottom: auto; position: absolute; overflow-y: auto; }
-    #sidebar.collapsed { max-height: none; }
-    #sidebar.collapsed .panel-content > *:not(.panel-header) { display: none; }
+    #sidebar.collapsed { max-height: none; overflow-y: visible; }
+    #sidebar.collapsed .panel-content { display: block !important; }
+    #sidebar.collapsed .panel-content > *:not(.panel-header) { display: none !important; }
+    #sidebar.collapsed .panel-header { padding: 10px 16px; }
     #map-container { left: 0; top: 50vh; width: 100%; }
     #sidebar.collapsed ~ #map-container { left: 0; top: auto; height: calc(100vh - 50px); }
 
-    #toggle-btn { display: none; }
-    #mobile-toggle-btn {
-      display: flex !important; align-items: center; gap: 4px;
-      flex-shrink: 0; font-size: 11px;
-    }
-    .panel-header { display: flex; align-items: center; justify-content: space-between; }
-    .panel-header > div { flex: 1; min-width: 0; }
     .panel-header h1 { font-size: 15px; }
   }
 </style>
@@ -207,7 +201,7 @@
         <h1>🏫 浦东新区幼儿园地图</h1>
         <div class="subtitle">2025年招生地段公示信息</div>
       </div>
-      <button id="mobile-toggle-btn" class="search-btn outline" style="display:none">收起 ▲</button>
+      <button id="mobile-toggle-btn" class="search-btn outline">收起 ▲</button>
     </div>
 
     <div class="search-section">
@@ -735,20 +729,12 @@ function bindEvents() {
   // 侧边栏折叠
   function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
-    const isMobile = window.innerWidth <= 768;
     sidebar.classList.toggle('collapsed');
-
-    if (isMobile) {
-      const mb = document.getElementById('mobile-toggle-btn');
-      mb.textContent = sidebar.classList.contains('collapsed') ? '展开 ▼' : '收起 ▲';
-    } else {
-      const btn = document.getElementById('toggle-btn');
-      btn.textContent = sidebar.classList.contains('collapsed') ? '▶' : '◀';
-    }
+    const mb = document.getElementById('mobile-toggle-btn');
+    mb.textContent = sidebar.classList.contains('collapsed') ? '展开 ▼' : '收起 ▲';
     setTimeout(() => map.resize(), 300);
   }
 
-  document.getElementById('toggle-btn').addEventListener('click', toggleSidebar);
   document.getElementById('mobile-toggle-btn').addEventListener('click', toggleSidebar);
 
   // 清空筛选
