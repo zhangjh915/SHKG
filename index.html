@@ -176,29 +176,23 @@
   }
 
   /* 移动端适配 */
-  @media (max-width: 768px) {
-    #sidebar { width: 100%; height: auto; max-height: 50vh; bottom: auto; overflow-y: auto; }
-    #sidebar.collapsed { width: 100%; height: auto; max-height: none; }
-    #sidebar.collapsed .panel-content > *:not(.panel-header) { display: none; }
-    #sidebar.collapsed .panel-header { padding: 10px 16px; }
-    #map-container { left: 0; top: 50vh; bottom: 0; width: 100%; }
-    #sidebar.collapsed ~ #map-container { left: 0; top: auto; bottom: 0; height: calc(100vh - 52px); }
+  #mobile-toggle-btn { display: none; }
 
-    #toggle-btn {
-      position: absolute; top: auto; bottom: -32px; left: 50%; right: auto;
-      transform: translateX(-50%); width: 120px; height: 28px;
-      border-radius: 0 0 12px 12px; font-size: 12px;
-      background: #1677ff; color: #fff; border: none;
-      box-shadow: 0 2px 8px rgba(22,119,255,0.3); z-index: 101;
-      line-height: 26px; letter-spacing: 1px;
+  @media (max-width: 768px) {
+    #sidebar { width: 100%; height: auto; max-height: 50vh; bottom: auto; position: absolute; overflow-y: auto; }
+    #sidebar.collapsed { max-height: none; }
+    #sidebar.collapsed .panel-content > *:not(.panel-header) { display: none; }
+    #map-container { left: 0; top: 50vh; width: 100%; }
+    #sidebar.collapsed ~ #map-container { left: 0; top: auto; height: calc(100vh - 50px); }
+
+    #toggle-btn { display: none; }
+    #mobile-toggle-btn {
+      display: flex !important; align-items: center; gap: 4px;
+      flex-shrink: 0; font-size: 11px;
     }
-    #sidebar.collapsed #toggle-btn {
-      top: 10px; bottom: auto; right: 10px; left: auto;
-      width: auto; height: 30px; border-radius: 8px;
-      transform: none; padding: 0 12px;
-      background: #fff; color: #1677ff; border: 1px solid #1677ff;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
+    .panel-header { display: flex; align-items: center; justify-content: space-between; }
+    .panel-header > div { flex: 1; min-width: 0; }
+    .panel-header h1 { font-size: 15px; }
   }
 </style>
 </head>
@@ -209,8 +203,11 @@
   <button id="toggle-btn" title="折叠/展开">◀</button>
   <div class="panel-content">
     <div class="panel-header">
-      <h1>🏫 浦东新区幼儿园地图</h1>
-      <div class="subtitle">2025年招生地段公示信息</div>
+      <div>
+        <h1>🏫 浦东新区幼儿园地图</h1>
+        <div class="subtitle">2025年招生地段公示信息</div>
+      </div>
+      <button id="mobile-toggle-btn" class="search-btn outline" style="display:none">收起 ▲</button>
     </div>
 
     <div class="search-section">
@@ -736,16 +733,23 @@ function bindEvents() {
   });
 
   // 侧边栏折叠
-  document.getElementById('toggle-btn').addEventListener('click', () => {
+  function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
-    const btn = document.getElementById('toggle-btn');
-    sidebar.classList.toggle('collapsed');
     const isMobile = window.innerWidth <= 768;
-    btn.textContent = sidebar.classList.contains('collapsed')
-      ? (isMobile ? '展开面板 ▼' : '▶')
-      : (isMobile ? '收起面板 ▲' : '◀');
+    sidebar.classList.toggle('collapsed');
+
+    if (isMobile) {
+      const mb = document.getElementById('mobile-toggle-btn');
+      mb.textContent = sidebar.classList.contains('collapsed') ? '展开 ▼' : '收起 ▲';
+    } else {
+      const btn = document.getElementById('toggle-btn');
+      btn.textContent = sidebar.classList.contains('collapsed') ? '▶' : '◀';
+    }
     setTimeout(() => map.resize(), 300);
-  });
+  }
+
+  document.getElementById('toggle-btn').addEventListener('click', toggleSidebar);
+  document.getElementById('mobile-toggle-btn').addEventListener('click', toggleSidebar);
 
   // 清空筛选
   document.getElementById('clearBtn').addEventListener('click', () => {
