@@ -1,0 +1,6 @@
+*.xls
+process_data.py
+failed_kindergartens.txt
+manual_overrides.json
+.DS_Store
+__pycache__/

@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>上海浦东新区幼儿园地图</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; height: 100vh; overflow: hidden; }
+
+  /* ====== 左侧面板 ====== */
+  #sidebar {
+    position: absolute; z-index: 100; top: 0; left: 0; width: 350px; height: 100%;
+    background: #fff; box-shadow: 0 0 24px rgba(0,0,0,0.06);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  #sidebar.collapsed { width: 40px; }
+  #sidebar.collapsed .panel-content { display: none; }
+
+  #toggle-btn {
+    position: absolute; top: 10px; right: -36px; width: 32px; height: 32px;
+    background: #fff; border: 1px solid #ddd; border-radius: 0 6px 6px 0;
+    cursor: pointer; font-size: 16px; line-height: 30px; text-align: center;
+    box-shadow: 2px 0 6px rgba(0,0,0,0.08); z-index: 101; color: #666;
+  }
+  #sidebar.collapsed #toggle-btn { right: -36px; }
+
+  .panel-content { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+
+  /* 标题栏 */
+  .panel-header {
+    padding: 20px 16px 16px;
+    background: linear-gradient(135deg, #1677ff, #0958d9); color: #fff;
+  }
+  .panel-header h1 { font-size: 17px; font-weight: 600; letter-spacing: 0.3px; }
+  .panel-header .subtitle { font-size: 11px; opacity: 0.8; margin-top: 3px; }
+
+  /* 搜索区 */
+  .search-section { padding: 14px 16px 12px; }
+  .search-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .search-row:last-child { margin-bottom: 0; }
+  .search-input {
+    flex: 1; height: 38px; padding: 0 12px; border: 1px solid #e8e8e8;
+    border-radius: 8px; font-size: 13px; outline: none; background: #fafafa;
+    transition: all 0.2s;
+  }
+  .search-input:focus { border-color: #1677ff; background: #fff; box-shadow: 0 0 0 2px rgba(22,119,255,0.1); }
+  .search-btn {
+    height: 38px; padding: 0 14px; border: none; border-radius: 8px;
+    background: #1677ff; color: #fff; font-size: 13px; font-weight: 500; cursor: pointer;
+    white-space: nowrap; transition: all 0.2s; flex-shrink: 0;
+  }
+  .search-btn:hover { background: #4096ff; }
+  .search-btn.outline {
+    background: #fff; color: #1677ff; border: 1px solid #1677ff;
+  }
+  .search-btn.outline:hover { background: #f0f5ff; }
+
+  .autocomplete-dropdown {
+    display: none; position: relative; z-index: 200;
+    background: #fff; border: 1px solid #e8e8e8; border-radius: 0 0 6px 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-height: 200px; overflow-y: auto;
+  }
+  .autocomplete-dropdown.active { display: block; }
+  .autocomplete-item {
+    padding: 8px 12px; font-size: 12px; cursor: pointer;
+    border-bottom: 1px solid #f5f5f5;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .autocomplete-item:last-child { border-bottom: none; }
+  .autocomplete-item:hover, .autocomplete-item.selected { background: #e6f7ff; }
+  .autocomplete-item .ac-name { flex: 1; color: #333; }
+  .autocomplete-item .ac-district { font-size: 11px; color: #999; white-space: nowrap; }
+
+  /* 距离排序列表 */
+  .distance-section {
+    padding: 12px 16px; border-bottom: 1px solid #f0f0f0;
+    display: none; max-height: 200px; overflow-y: auto;
+  }
+  .distance-section.active { display: block; }
+  .distance-section h3 { font-size: 13px; color: #666; margin-bottom: 8px; }
+  .dist-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;
+    transition: background 0.15s;
+  }
+  .dist-item:hover { background: #f5f5f5; }
+  .dist-item .name { flex: 1; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dist-item .dist { color: #1890ff; font-weight: 600; margin-left: 8px; white-space: nowrap; }
+  .dist-item .dist.km { font-size: 11px; font-weight: 400; }
+
+  .search-results-section {
+    flex: 1; overflow-y: auto; padding: 12px 16px;
+    display: none;
+  }
+  .search-results-section.active { display: block; }
+  .search-results-section h3 { font-size: 13px; color: #666; margin-bottom: 8px; }
+  .search-result-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;
+    transition: background 0.15s;
+  }
+  .search-result-item:hover { background: #f5f5f5; }
+  .search-result-item .result-name { flex: 1; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .result-level-badge {
+    display: inline-block; padding: 1px 8px; border-radius: 3px;
+    font-size: 10px; color: #fff; white-space: nowrap; flex-shrink: 0;
+  }
+  .dist-badge {
+    display: inline-block; padding: 0 6px; border-radius: 3px;
+    font-size: 10px; margin-right: 4px; color: #fff; line-height: 18px;
+  }
+
+  .section-divider { border-top: 1px solid #f0f0f0; }
+
+  /* 筛选区 */
+  .filter-section { padding: 14px 16px 12px; }
+  .filter-title { font-size: 12px; font-weight: 600; color: #888; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .level-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+  .level-tag {
+    padding: 5px 14px; border-radius: 16px; font-size: 12px; cursor: pointer;
+    border: 1.5px solid #e8e8e8; color: #888; user-select: none;
+    transition: all 0.2s; background: #fafafa; font-weight: 500;
+  }
+  .level-tag:hover { border-color: #bbb; color: #555; }
+  .level-tag.active { color: #fff; border-color: transparent; font-weight: 600; }
+  .level-tag[data-level="示范园"].active { background: #e74c3c; border-color: #e74c3c; }
+  .level-tag[data-level="一级园"].active { background: #f39c12; border-color: #f39c12; }
+  .level-tag[data-level="一级园（区示范）"].active { background: #e67e22; border-color: #e67e22; }
+  .level-tag[data-level="二级园"].active { background: #3498db; border-color: #3498db; }
+  .level-tag[data-level="高质量园"].active { background: #2ecc71; border-color: #2ecc71; }
+  .level-tag[data-level="特教班"].active { background: #9b59b6; border-color: #9b59b6; }
+  .level-tag[data-level="其他"].active { background: #95a5a6; border-color: #95a5a6; }
+
+  .fee-slider { margin-top: 14px; }
+  .fee-slider label { font-size: 11px; color: #bbb; }
+  .fee-slider input[type=range] {
+    width: 100%; margin: 4px 0; accent-color: #1677ff; height: 4px;
+  }
+  .fee-display { font-size: 12px; color: #1677ff; font-weight: 600; margin-bottom: 2px; }
+
+  .clear-btn {
+    width: 100%; margin-top: 12px; height: 34px;
+    border: 1px solid #e8e8e8; border-radius: 8px;
+    background: #fafafa; color: #888; font-size: 12px; cursor: pointer;
+    transition: all 0.2s; font-weight: 500;
+  }
+  .clear-btn:hover { border-color: #1677ff; color: #1677ff; background: #f0f5ff; }
+
+  /* 统计栏 */
+  .stats-bar {
+    padding: 8px 16px; font-size: 12px; color: #999; border-top: 1px solid #f0f0f0;
+    background: #fafafa;
+  }
+  .stats-bar strong { color: #1677ff; }
+
+  /* 地图容器 */
+  #map-container { position: absolute; top: 0; left: 350px; right: 0; bottom: 0; }
+  #sidebar.collapsed ~ #map-container { left: 40px; }
+
+  /* 信息窗自定义样式 */
+  .info-card {
+    min-width: 220px; max-width: 300px;
+  }
+  .info-card .kg-name { font-size: 14px; font-weight: 700; color: #333; margin-bottom: 6px; line-height: 1.4; }
+  .info-card .kg-meta { font-size: 12px; color: #666; line-height: 1.8; }
+  .info-card .kg-meta span { margin-right: 12px; }
+  .info-card .kg-badge {
+    display: inline-block; padding: 1px 8px; border-radius: 3px;
+    font-size: 11px; color: #fff; font-weight: 600;
+  }
+  .info-card .kg-addr { font-size: 11px; color: #999; margin-top: 4px; line-height: 1.5; }
+
+  .amap-info-content {
+    padding: 0 !important;
+  }
+
+  /* 移动端适配 */
+  @media (max-width: 768px) {
+    #sidebar { width: 100%; height: auto; max-height: 45vh; bottom: auto; }
+    #sidebar.collapsed { width: 100%; height: 40px; }
+    #sidebar.collapsed #toggle-btn { right: 10px; top: 5px; }
+    #map-container { left: 0; top: 45vh; }
+    #sidebar.collapsed ~ #map-container { left: 0; top: 40px; }
+    #toggle-btn { right: 10px; top: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ====== 侧边栏 ====== -->
+<div id="sidebar">
+  <button id="toggle-btn" title="折叠/展开">◀</button>
+  <div class="panel-content">
+    <div class="panel-header">
+      <h1>🏫 浦东新区幼儿园地图</h1>
+      <div class="subtitle">2025年招生地段公示信息</div>
+    </div>
+
+    <div class="search-section">
+      <div class="search-row">
+        <input class="search-input" id="nameSearch" placeholder="搜索幼儿园名称（支持分部）" />
+        <button class="search-btn" id="searchBtn">搜索</button>
+      </div>
+      <div class="search-row">
+        <input class="search-input" id="homeAddr" placeholder="🏠 输入家庭地址（小区名/路名均可）" autocomplete="off" />
+        <button class="search-btn outline" id="homeBtn">定位</button>
+      </div>
+      <div class="autocomplete-dropdown" id="autocompleteDropdown"></div>
+    </div>
+
+    <div class="distance-section" id="distanceSection">
+      <h3>📏 按距离排序（最近的前20）</h3>
+      <div id="distanceList"></div>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-title">🏷️ 办园等级</div>
+      <div class="level-tags" id="levelTags">
+        <span class="level-tag" data-level="示范园">示范园</span>
+        <span class="level-tag" data-level="一级园">一级园</span>
+        <span class="level-tag" data-level="一级园（区示范）">一级园(区示范)</span>
+        <span class="level-tag" data-level="二级园">二级园</span>
+        <span class="level-tag" data-level="高质量园">高质量园</span>
+        <span class="level-tag" data-level="特教班">特教班</span>
+        <span class="level-tag" data-level="其他">其他</span>
+      </div>
+
+      <div class="fee-slider">
+        <div class="fee-display">💰 月保育费上限：<span id="feeLabel">不限</span></div>
+        <input type="range" id="feeRange" min="0" max="17000" value="17000" step="100" />
+        <label>0元</label>
+        <label style="float:right">17000元</label>
+      </div>
+
+      <button class="clear-btn" id="clearBtn">🔄 清空筛选</button>
+    </div>
+
+    <div class="stats-bar">
+      当前显示 <strong id="visibleCount">0</strong> / <strong id="totalCount">0</strong> 所幼儿园
+    </div>
+
+    <div class="search-results-section" id="searchResultsSection">
+      <h3>🔍 搜索结果</h3>
+      <div id="searchResultsList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 地图 ====== -->
+<div id="map-container">
+  <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:14px">
+    ⏳ 地图加载中...
+  </div>
+</div>
+
+<!-- 高德地图安全密钥配置（白名单和安全密钥二选一即可） -->
+<script>
+  window._AMapSecurityConfig = {
+    securityJsCode: '3fa1f99a9a404d480fb045aebb48c522',
+  }
+</script>
+<!-- 高德 JS API v2 -->
+<script src="https://webapi.amap.com/maps?v=2.0&key=2e8dfb7d1cf03f902ae1bd3a26f79d2e" onerror="document.getElementById('map-container').innerHTML='<div style=display:flex;align-items:center;justify-content:center;height:100%;color:#e74c3c;font-size:18px>' +
+  '⚠️ 高德地图 JS 加载失败<br><small style=font-size:13px>请检查：1) Key 是否正确 2) 安全密钥是否正确</small></div>'"></script>
+
+<script>
+// ==================== 全局状态 ====================
+let allData = [];
+let markers = [];
+
+let map = null;
+let infoWindow = null;
+let homeCoord = null;
+
+// 等级配色
+const LEVEL_COLORS = {
+  '示范园': '#e74c3c',
+  '一级园': '#f39c12',
+  '一级园（区示范）': '#e67e22',
+  '二级园': '#3498db',
+  '高质量园': '#2ecc71',
+  '特教班': '#9b59b6',
+  '其他': '#95a5a6',
+};
+
+const LEVEL_ORDER = ['示范园', '一级园', '一级园（区示范）', '二级园', '高质量园', '特教班', '其他'];
+
+// ==================== 初始化 ====================
+async function init() {
+  // 检查 AMap 是否加载成功
+  if (typeof AMap === 'undefined') {
+    document.getElementById('map-container').innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#e74c3c;font-size:18px;flex-direction:column;text-align:center;padding:20px">' +
+      '<p>⚠️ 高德地图 JS 加载失败</p>' +
+      '<p style="font-size:13px;color:#999">请确认：<br>' +
+      '1) Key 已在控制台开启「JS API」服务<br>' +
+      '2) 域名白名单已添加 localhost / 127.0.0.1</p></div>';
+    return;
+  }
+
+  try {
+    // 初始化地图
+    map = new AMap.Map('map-container', {
+      zoom: 12,
+      center: [121.62, 31.20],
+      mapStyle: 'amap://styles/light',
+    });
+
+    infoWindow = new AMap.InfoWindow({ offset: new AMap.Pixel(0, -30) });
+    let clickFromMarker = false;
+
+    // 点击地图空白处关闭信息窗（排除标记点击）
+    map.on('click', () => {
+      if (!clickFromMarker) infoWindow.close();
+      clickFromMarker = false;
+    });
+
+    // 加载数据
+    const resp = await fetch('data.json');
+    allData = await resp.json();
+
+    // 补充 seq 数字（用于排序），处理 "1.0" 类似格式
+    allData.forEach(d => {
+      d._seqNum = parseFloat(d.seq) || 0;
+    });
+
+    document.getElementById('totalCount').textContent = allData.length;
+
+    // 添加标记
+    addMarkers(allData);
+
+    // 绑定事件
+    bindEvents();
+    applyFilters();
+
+    console.log('✅ 地图加载完成，共', allData.length, '所幼儿园');
+  } catch(e) {
+    console.error('地图初始化失败:', e);
+    document.getElementById('map-container').innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#e74c3c;font-size:16px">' +
+      '⚠️ 初始化失败: ' + e.message + '</div>';
+  }
+}
+
+// ==================== 标记生成 ====================
+function createMarkerContent(item, color) {
+  const div = document.createElement('div');
+  div.style.cssText = `
+    width: 24px; height: 24px; border-radius: 50%;
+    background: ${color}; border: 3px solid #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    cursor: pointer; transition: transform 0.15s;
+  `;
+  div.addEventListener('mouseenter', () => div.style.transform = 'scale(1.3)');
+  div.addEventListener('mouseleave', () => div.style.transform = 'scale(1)');
+  return div;
+}
+
+function addMarkers(data) {
+  // 清除旧标记
+  markers.forEach(m => m.setMap(null));
+  markers = [];
+
+  const validData = data.filter(d => d.lng != null && d.lat != null);
+
+  validData.forEach(item => {
+    const color = LEVEL_COLORS[item.level] || '#95a5a6';
+    const content = createMarkerContent(item, color);
+
+    const marker = new AMap.Marker({
+      position: [item.lng, item.lat],
+      content: content,
+      offset: new AMap.Pixel(-12, -12),
+      zIndex: LEVEL_ORDER.indexOf(item.level),
+    });
+
+    marker._data = item;
+
+    marker.on('click', () => {
+      clickFromMarker = true;
+      showInfo(item, marker);
+    });
+
+    markers.push(marker);
+  });
+
+  // 标记直接添加到地图
+  markers.forEach(m => m.setMap(map));
+  console.log('✅ 已添加', markers.length, '个标记到地图');
+}
+
+// ==================== 信息窗 ====================
+function showInfo(item, marker) {
+  const addresses = (item.address || []).slice(0, 5).join('<br>');
+  let distHtml = '';
+  if (homeCoord && item.lng && item.lat) {
+    const d = haversine(homeCoord[0], homeCoord[1], item.lng, item.lat);
+    distHtml = `<span style="color:#e74c3c">📏 ${formatDistance(d)}</span>`;
+  }
+
+  const content = `
+    <div class="info-card" style="padding:12px 14px;">
+      <div class="kg-name">${item.name}</div>
+      <div class="kg-meta">
+        <span class="kg-badge" style="background:${LEVEL_COLORS[item.level] || '#95a5a6'}">${item.level}</span>
+        <span>${item.fee.display}</span>
+        ${distHtml}
+      </div>
+      ${addresses ? `<div class="kg-addr">📍 招生地段：<br>${addresses}</div>` : ''}
+      ${item.poi_address ? `<div class="kg-addr" style="margin-top:4px;color:#52c41a">🏫 幼儿园地址：${item.poi_address}</div>` : ''}
+      ${item.location_approx ? `<div class="kg-addr" style="margin-top:4px;color:#faad14">⚠️ 位置为招生地段近似，非幼儿园精确地址</div>` : ''}
+    </div>
+  `;
+
+  infoWindow.setContent(content);
+  infoWindow.open(map, marker.getPosition());
+}
+
+// ==================== Haversine 距离 ====================
+function haversine(lng1, lat1, lng2, lat2) {
+  const R = 6371; // km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c; // 返回千米数（number）
+}
+
+function formatDistance(d) {
+  if (d < 1) return (d * 1000).toFixed(0) + 'm';
+  return d.toFixed(2) + 'km';
+}
+
+// ==================== 距离排序 ====================
+function calcDistances() {
+  if (!homeCoord) return;
+  const list = [];
+  allData.forEach(item => {
+    if (item.lng && item.lat) {
+      list.push({
+        ...item,
+        distance: formatDistance(haversine(homeCoord[0], homeCoord[1], item.lng, item.lat)),
+        distanceVal: haversine(homeCoord[0], homeCoord[1], item.lng, item.lat),
+      });
+    }
+  });
+  list.sort((a, b) => a.distanceVal - b.distanceVal);
+  return list.slice(0, 20);
+}
+
+function renderDistanceList() {
+  const section = document.getElementById('distanceSection');
+  const listDiv = document.getElementById('distanceList');
+  const list = calcDistances();
+
+  if (!list || list.length === 0) {
+    section.classList.remove('active');
+    return;
+  }
+
+  section.classList.add('active');
+  listDiv.innerHTML = list.map((item, idx) => {
+    const name = (item.name || '').replace(/"/g, '&quot;');
+    return `
+    <div class="dist-item" data-lng="${item.lng}" data-lat="${item.lat}" data-name="${name}">
+      <span class="name">
+        <span class="dist-badge" style="background:${LEVEL_COLORS[item.level] || '#95a5a6'}">${idx+1}</span>
+        ${item.name}
+      </span>
+      <span class="dist">${item.distance}<span class="km"></span></span>
+    </div>
+  `}).join('');
+}
+
+function flyTo(lng, lat, name) {
+  // 先找到 marker
+  const marker = markers.find(m => m._data && m._data.name === name);
+  // 等地图动画结束后弹窗
+  const onMoveEnd = () => {
+    map.off('moveend', onMoveEnd);
+    if (marker) showInfo(marker._data, marker);
+  };
+  map.on('moveend', onMoveEnd);
+  map.setZoomAndCenter(15, [lng, lat]);
+}
+
+// ==================== 筛选逻辑 ====================
+function getActiveLevels() {
+  const tags = document.querySelectorAll('.level-tag.active');
+  return Array.from(tags).map(t => t.dataset.level);
+}
+
+function applyFilters() {
+  const keyword = document.getElementById('nameSearch').value.trim().toLowerCase();
+  const activeLevels = getActiveLevels();
+  const maxFee = parseInt(document.getElementById('feeRange').value);
+
+  let filtered = allData;
+
+  // 等级筛选
+  if (activeLevels.length > 0 && activeLevels.length < LEVEL_ORDER.length) {
+    filtered = filtered.filter(d => activeLevels.includes(d.level));
+  }
+
+  // 费用筛选
+  if (maxFee < 17000) {
+    filtered = filtered.filter(d => d.fee && d.fee.max <= maxFee);
+  }
+
+  // 名称搜索
+  if (keyword) {
+    filtered = filtered.filter(d => d.name.toLowerCase().includes(keyword));
+  }
+
+  // 更新地图标记
+  addMarkers(filtered);
+
+  // 更新统计
+  document.getElementById('visibleCount').textContent = filtered.length;
+
+  // 渲染搜索结果列表
+  if (keyword) {
+    renderSearchResults(filtered);
+  } else {
+    document.getElementById('searchResultsSection').classList.remove('active');
+  }
+
+  // 如果有家庭地址，更新距离列表（忽略名称关键词，只看等级和费用）
+  if (homeCoord) {
+    renderDistanceListWithFiltered(getFilteredData({skipKeyword: true}));
+  }
+}
+
+function renderDistanceListWithFiltered(filtered) {
+  if (!homeCoord) return;
+  const section = document.getElementById('distanceSection');
+  const listDiv = document.getElementById('distanceList');
+
+  const list = filtered
+    .filter(item => item.lng && item.lat)
+    .map(item => ({
+      ...item,
+      distance: formatDistance(haversine(homeCoord[0], homeCoord[1], item.lng, item.lat)),
+      distanceVal: haversine(homeCoord[0], homeCoord[1], item.lng, item.lat),
+    }))
+    .sort((a, b) => a.distanceVal - b.distanceVal)
+    .slice(0, 20);
+
+  if (list.length === 0) {
+    section.classList.remove('active');
+    return;
+  }
+
+  section.classList.add('active');
+  listDiv.innerHTML = list.map((item, idx) => {
+    const name = (item.name || '').replace(/"/g, '&quot;');
+    return `
+    <div class="dist-item" data-lng="${item.lng}" data-lat="${item.lat}" data-name="${name}">
+      <span class="name">
+        <span class="dist-badge" style="background:${LEVEL_COLORS[item.level] || '#95a5a6'}">${idx+1}</span>
+        ${item.name}
+      </span>
+      <span class="dist">${item.distance}<span class="km"></span></span>
+    </div>
+  `}).join('');
+}
+
+// ==================== 搜索结果列表 ====================
+function renderSearchResults(filtered) {
+  const section = document.getElementById('searchResultsSection');
+  const listDiv = document.getElementById('searchResultsList');
+
+  if (filtered.length === 0) {
+    section.classList.add('active');
+    listDiv.innerHTML = '<div style="color:#999;font-size:12px;padding:8px">未找到匹配的幼儿园</div>';
+    return;
+  }
+
+  section.classList.add('active');
+  listDiv.innerHTML = filtered.map((item, idx) => {
+    const name = (item.name || '').replace(/"/g, '&quot;');
+    return `
+    <div class="search-result-item" data-lng="${item.lng || ''}" data-lat="${item.lat || ''}" data-name="${name}" data-idx="${idx}">
+      <span class="result-name">${item.name}</span>
+      <span class="result-level-badge" style="background:${LEVEL_COLORS[item.level] || '#95a5a6'}">${item.level}</span>
+    </div>
+  `}).join('');
+}
+
+// ==================== 事件绑定 ====================
+function bindEvents() {
+  // 等级标签点击
+  document.querySelectorAll('.level-tag').forEach(tag => {
+    tag.addEventListener('click', () => {
+      tag.classList.toggle('active');
+      applyFilters();
+      if (homeCoord) renderDistanceListWithFiltered(getFilteredData({skipKeyword: true}));
+    });
+  });
+
+  // 费用滑块
+  const feeRange = document.getElementById('feeRange');
+  feeRange.addEventListener('input', () => {
+    const v = parseInt(feeRange.value);
+    document.getElementById('feeLabel').textContent = v < 17000 ? v + '元/月' : '不限';
+  });
+  feeRange.addEventListener('change', () => {
+    applyFilters();
+    if (homeCoord) renderDistanceListWithFiltered(getFilteredData({skipKeyword: true}));
+  });
+
+  // 搜索按钮
+  document.getElementById('searchBtn').addEventListener('click', () => {
+    applyFilters();
+    if (homeCoord) renderDistanceListWithFiltered(getFilteredData({skipKeyword: true}));
+  });
+
+  // 回车搜索
+  document.getElementById('nameSearch').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      applyFilters();
+      if (homeCoord) renderDistanceListWithFiltered(getFilteredData({skipKeyword: true}));
+    }
+  });
+
+  // 家庭地址自动完成
+  let acTimer = null;
+  let acSelectedIndex = -1;
+  const homeInput = document.getElementById('homeAddr');
+  const acDropdown = document.getElementById('autocompleteDropdown');
+
+  homeInput.addEventListener('input', () => {
+    clearTimeout(acTimer);
+    const val = homeInput.value.trim();
+    if (val.length < 2) {
+      acDropdown.classList.remove('active');
+      return;
+    }
+    acTimer = setTimeout(() => {
+      AMap.plugin('AMap.AutoComplete', () => {
+        const auto = new AMap.AutoComplete({
+          city: '上海',
+          citylimit: true,
+        });
+        auto.search(val, (status, result) => {
+          if (status === 'complete' && result.info === 'OK' && result.tips) {
+            acSelectedIndex = -1;
+            acDropdown.innerHTML = result.tips.map((tip, i) => `
+              <div class="autocomplete-item" data-index="${i}" data-name="${(tip.name || '').replace(/"/g, '&quot;')}" data-district="${(tip.district || '').replace(/"/g, '&quot;')}" data-location="${tip.location || ''}">
+                <span class="ac-name">${tip.name}</span>
+                <span class="ac-district">${tip.district || ''}</span>
+              </div>
+            `).join('');
+            acDropdown.classList.add('active');
+          }
+        });
+      });
+    }, 300);
+  });
+
+  // 键盘导航
+  homeInput.addEventListener('keydown', e => {
+    const items = acDropdown.querySelectorAll('.autocomplete-item');
+    if (!items.length) {
+      if (e.key === 'Enter') locateHome();
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      acSelectedIndex = Math.min(acSelectedIndex + 1, items.length - 1);
+      updateAcSelection(items);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      acSelectedIndex = Math.max(acSelectedIndex - 1, -1);
+      updateAcSelection(items);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (acSelectedIndex >= 0) {
+        items[acSelectedIndex].click();
+      } else {
+        acDropdown.classList.remove('active');
+        locateHome();
+      }
+    } else if (e.key === 'Escape') {
+      acDropdown.classList.remove('active');
+    }
+  });
+
+  function updateAcSelection(items) {
+    items.forEach((item, i) => {
+      item.classList.toggle('selected', i === acSelectedIndex);
+    });
+  }
+
+  // 点击下拉项 → 直接定位
+  acDropdown.addEventListener('click', e => {
+    const item = e.target.closest('.autocomplete-item');
+    if (!item) return;
+    const location = item.dataset.location;
+    if (location) {
+      const [lng, lat] = location.split(',').map(Number);
+      homeInput.value = item.dataset.name;
+      acDropdown.classList.remove('active');
+      setHomeMarkerFromCoord([lng, lat]);
+    }
+  });
+
+  // 点击页面其他地方关闭下拉
+  document.addEventListener('click', e => {
+    if (!acDropdown.contains(e.target) && e.target !== homeInput) {
+      acDropdown.classList.remove('active');
+    }
+  });
+
+  // 定位按钮
+  document.getElementById('homeBtn').addEventListener('click', () => {
+    acDropdown.classList.remove('active');
+    locateHome();
+  });
+
+  // 侧边栏折叠
+  document.getElementById('toggle-btn').addEventListener('click', () => {
+    const sidebar = document.getElementById('sidebar');
+    const btn = document.getElementById('toggle-btn');
+    sidebar.classList.toggle('collapsed');
+    btn.textContent = sidebar.classList.contains('collapsed') ? '▶' : '◀';
+    setTimeout(() => map.resize(), 300);
+  });
+
+  // 清空筛选
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    // 重置等级标签
+    document.querySelectorAll('.level-tag').forEach(t => t.classList.remove('active'));
+    // 重置名称搜索
+    document.getElementById('nameSearch').value = '';
+    // 重置家庭地址
+    document.getElementById('homeAddr').value = '';
+    // 重置费用滑块
+    document.getElementById('feeRange').value = 17000;
+    document.getElementById('feeLabel').textContent = '不限';
+    // 隐藏距离列表
+    document.getElementById('distanceSection').classList.remove('active');
+    // 隐藏搜索结果
+    document.getElementById('searchResultsSection').classList.remove('active');
+    // 重新全量渲染
+    addMarkers(allData);
+    document.getElementById('visibleCount').textContent = allData.length;
+  });
+
+  // 搜索结果列表点击（事件委托）
+  document.getElementById('searchResultsList').addEventListener('click', e => {
+    const item = e.target.closest('.search-result-item');
+    if (!item) return;
+    const lng = parseFloat(item.dataset.lng);
+    const lat = parseFloat(item.dataset.lat);
+    const name = item.dataset.name;
+    if (lng && lat) flyTo(lng, lat, name);
+  });
+
+  // 距离列表点击（事件委托）
+  document.getElementById('distanceList').addEventListener('click', e => {
+    const item = e.target.closest('.dist-item');
+    if (!item) return;
+    const lng = parseFloat(item.dataset.lng);
+    const lat = parseFloat(item.dataset.lat);
+    const name = item.dataset.name;
+    if (lng && lat) flyTo(lng, lat, name);
+  });
+}
+
+function getFilteredData(opts = {}) {
+  const keyword = document.getElementById('nameSearch').value.trim().toLowerCase();
+  const activeLevels = getActiveLevels();
+  const maxFee = parseInt(document.getElementById('feeRange').value);
+
+  let filtered = allData;
+
+  if (activeLevels.length > 0 && activeLevels.length < LEVEL_ORDER.length) {
+    filtered = filtered.filter(d => activeLevels.includes(d.level));
+  }
+  if (maxFee < 17000) {
+    filtered = filtered.filter(d => d.fee && d.fee.max <= maxFee);
+  }
+  if (keyword && !opts.skipKeyword) {
+    filtered = filtered.filter(d => d.name.toLowerCase().includes(keyword));
+  }
+  return filtered;
+}
+
+// ==================== 家庭地址定位 ====================
+
+function setHomeMarkerFromCoord(coord) {
+  homeCoord = coord;
+
+  if (window._homeMarker) window._homeMarker.setMap(null);
+
+  const homeMarker = new AMap.Marker({
+    position: homeCoord,
+    icon: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_r.png',
+    title: '我家',
+  });
+  homeMarker.setMap(map);
+  window._homeMarker = homeMarker;
+
+  map.setZoomAndCenter(14, homeCoord);
+  renderDistanceListWithFiltered(getFilteredData({skipKeyword: true}));
+}
+
+async function locateHome() {
+  const addr = document.getElementById('homeAddr').value.trim();
+  if (!addr) { alert('请输入家庭地址'); return; }
+
+  AMap.plugin(['AMap.Geocoder', 'AMap.PlaceSearch'], () => {
+    trySearch(addr);
+  });
+
+  function trySearch(addr) {
+    const geocoder = new AMap.Geocoder({ city: '上海' });
+
+    geocoder.getLocation(addr, (status, result) => {
+      if (status === 'complete' && result.info === 'OK') {
+        const loc = result.geocodes[0].location;
+        setHomeMarkerFromCoord([loc.lng, loc.lat]);
+        return;
+      }
+      // 地理编码失败 → POI 搜索
+      console.log('地理编码失败，尝试POI搜索:', addr);
+      const placeSearch = new AMap.PlaceSearch({
+        city: '上海',
+        citylimit: true,
+        pageSize: 1,
+      });
+      placeSearch.search(addr, (pstatus, presult) => {
+        if (pstatus === 'complete' && presult.info === 'OK' && presult.poiList) {
+          const pois = presult.poiList.pois || presult.poiList;
+          if (pois.length > 0) {
+            setHomeMarkerFromCoord([pois[0].location.lng, pois[0].location.lat]);
+            return;
+          }
+        }
+        alert('定位失败，请尝试输入路名+门牌号（如：南京路100号）');
+      });
+    });
+  }
+}
+
+// ==================== 启动 ====================
+window.onload = init;
+</script>
+</body>
+</html>
